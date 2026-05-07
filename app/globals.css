@@ -1,26 +1,163 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-void: #050508;
+  --color-surface: #0d0d14;
+  --color-elevated: #14141f;
+  --color-teal: #00d4ff;
+  --color-teal-dim: rgba(0, 212, 255, 0.08);
+  --color-teal-border: rgba(0, 212, 255, 0.28);
+  --color-amber: #ffb800;
+  --color-amber-dim: rgba(255, 184, 0, 0.08);
+  --color-text-primary: #e8e8f0;
+  --color-text-secondary: #6b6b8a;
+  --color-text-muted: #35354a;
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+  --font-display: var(--font-syne), sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--color-void);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Cosmic atmosphere ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -5%, rgba(0, 212, 255, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 85% 90%, rgba(255, 184, 0, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 10% 70%, rgba(0, 212, 255, 0.03) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Noise overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 9998;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-text-muted); border-radius: 2px; }
+
+/* ── Typography ── */
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+/* ── Animations ── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 212, 255, 0.25), inset 0 0 8px rgba(0, 212, 255, 0.04); }
+  50%       { box-shadow: 0 0 20px rgba(0, 212, 255, 0.45), inset 0 0 12px rgba(0, 212, 255, 0.08); }
+}
+
+@keyframes scanline {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bar-bounce {
+  0%, 100% { transform: scaleY(0.2); }
+  50%       { transform: scaleY(1); }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes label-cycle {
+  0%, 30%   { opacity: 1; }
+  33%, 63%  { opacity: 0; }
+  66%, 96%  { opacity: 0; }
+  99%, 100% { opacity: 0; }
+}
+
+/* ── Utility classes ── */
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ── Component: Panel ── */
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 2px;
+  position: relative;
+}
+
+/* ── Component: Label ── */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* ── Component: Scanline ── */
+.scanning::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--color-teal) 50%, transparent 100%);
+  animation: scanline 2.5s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0.7;
+}
+
+/* ── Component: Shimmer skeleton ── */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-elevated) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ── Teal focus ring ── */
+.focus-teal:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-teal), 0 0 8px rgba(0, 212, 255, 0.2);
 }
