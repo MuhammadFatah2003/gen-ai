@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Generation, GenerateResponse, GenerationType, AspectRatio } from '@/lib/types';
+import { Generation, GenerationType, AspectRatio } from '@/lib/types';
 import ModeToggle from './ModeToggle';
 import PromptInput from './PromptInput';
 import AspectRatioSelector from './AspectRatioSelector';
@@ -25,7 +25,8 @@ export default function GeneratorApp() {
     setIsGenerating(true);
     setError(null);
     try {
-      const res = await fetch('/api/generate', {
+      // Step 1: start the prediction (fast, < 5s)
+      const startRes = await fetch('/api/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -35,23 +36,47 @@ export default function GeneratorApp() {
         }),
       });
 
-      const data: GenerateResponse = await res.json();
-
-      if (!res.ok || data.error) {
-        throw new Error(data.error ?? `Request failed (${res.status})`);
+      const startData = await startRes.json();
+      if (!startRes.ok || startData.error) {
+        throw new Error(startData.message ?? `Failed to start (${startRes.status})`);
       }
 
-      const gen: Generation = {
-        id: crypto.randomUUID(),
-        url: data.url,
-        type: data.type,
-        prompt: data.prompt,
-        ...(mode === 'image' && { aspect_ratio: aspectRatio }),
-        createdAt: new Date(),
-      };
+      const { prediction_url, type: genType, prompt: genPrompt } = startData;
 
-      setCurrentResult(gen);
-      setGallery((prev) => [gen, ...prev].slice(0, 4));
+      // Step 2: poll every 3s until succeeded/failed
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 3000));
+
+        const pollRes = await fetch('/api/poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prediction_url, type: genType, prompt: genPrompt }),
+        });
+
+        const pollData = await pollRes.json();
+        if (!pollRes.ok || pollData.error) {
+          throw new Error(pollData.message ?? 'Polling failed');
+        }
+
+        if (pollData.status === 'succeeded') {
+          const gen: Generation = {
+            id: crypto.randomUUID(),
+            url: pollData.url,
+            type: pollData.type,
+            prompt: pollData.prompt,
+            ...(mode === 'image' && { aspect_ratio: aspectRatio }),
+            createdAt: new Date(),
+          };
+          setCurrentResult(gen);
+          setGallery((prev) => [gen, ...prev].slice(0, 4));
+          return;
+        }
+
+        if (pollData.status === 'failed' || pollData.status === 'canceled') {
+          throw new Error(`Generation ${pollData.status}`);
+        }
+        // status: 'starting' | 'processing' → keep polling
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generation failed');
     } finally {
@@ -93,7 +118,7 @@ export default function GeneratorApp() {
           letterSpacing: '0.15em',
           color: 'var(--color-text-muted)',
         }}>
-          REPLICATE · FLUX · WAN2.1
+          REPLICATE · FLUX · KLING
         </span>
       </header>
 
